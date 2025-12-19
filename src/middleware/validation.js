@@ -6,7 +6,7 @@ const { body, validationResult } = require('express-validator');
 const registerValidation = [
   // Name validation
   body('name')
-    .trim()  // Remove spaces from start/end
+    .trim()
     .notEmpty().withMessage('Name is required')
     .isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters')
     .matches(/^[a-zA-Z\s]+$/).withMessage('Name can only contain letters'),
@@ -16,14 +16,14 @@ const registerValidation = [
     .trim()
     .notEmpty().withMessage('Email is required')
     .isEmail().withMessage('Please enter a valid email address')
-    .normalizeEmail(),  // Converts to lowercase
+    .normalizeEmail(),
 
   // Password validation
   body('password')
     .notEmpty().withMessage('Password is required')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    .withMessage('Password must contain uppercase, lowercase, and number'),
 
   // Optional: Location validation
   body('location.address')
@@ -36,13 +36,11 @@ const registerValidation = [
 // LOGIN VALIDATION RULES
 // ====================================
 const loginValidation = [
-  // Email validation
   body('email')
     .trim()
     .notEmpty().withMessage('Email is required')
     .isEmail().withMessage('Please enter a valid email address'),
 
-  // Password validation (just check it exists, don't validate strength)
   body('password')
     .notEmpty().withMessage('Password is required')
 ];
@@ -77,7 +75,7 @@ const listingValidation = [
   // Expiry date validation
   body('expiryDateTime')
     .notEmpty().withMessage('Expiry date and time is required')
-    .isISO8601().withMessage('Invalid date format. Use YYYY-MM-DD or ISO 8601 format')
+    .isISO8601().withMessage('Invalid date format')
     .custom((value) => {
       const expiryDate = new Date(value);
       const now = new Date();
@@ -86,7 +84,6 @@ const listingValidation = [
         throw new Error('Expiry date must be in the future');
       }
       
-      // Optional: Don't allow expiry more than 30 days in future
       const maxDate = new Date();
       maxDate.setDate(maxDate.getDate() + 30);
       
@@ -97,7 +94,7 @@ const listingValidation = [
       return true;
     }),
 
-  // Pickup location validation (optional, depending on your schema)
+  // Pickup location validation
   body('pickupLocation.address')
     .optional()
     .trim()
@@ -111,12 +108,12 @@ const listingValidation = [
     .optional()
     .isFloat({ min: -180, max: 180 }).withMessage('Invalid longitude'),
 
-  // Dietary info validation (optional array)
+  // Dietary info validation
   body('dietaryInfo')
     .optional()
     .isArray().withMessage('Dietary info must be an array'),
 
-  // Allergens validation (optional array)
+  // Allergens validation
   body('allergens')
     .optional()
     .isArray().withMessage('Allergens must be an array')
@@ -125,12 +122,10 @@ const listingValidation = [
 // ====================================
 // VALIDATION RESULT CHECKER
 // ====================================
-// This middleware checks if validation passed or failed
 const validate = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
-    // Validation failed - send errors back
     return res.status(400).json({
       success: false,
       errors: errors.array().map(err => ({
@@ -140,7 +135,6 @@ const validate = (req, res, next) => {
     });
   }
   
-  // Validation passed - continue to next middleware/controller
   next();
 };
 

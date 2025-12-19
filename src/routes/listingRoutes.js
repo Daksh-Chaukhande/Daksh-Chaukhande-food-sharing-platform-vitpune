@@ -3,6 +3,7 @@ const multer = require('multer');  // Library for handling file uploads
 const path = require('path');  // Node.js built-in library for handling file paths
 const { createListing, getListings, getListing, deleteListing } = require('../controllers/listingController');
 const { protect } = require('../middleware/authMiddleware');
+const { listingValidation, validate } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -43,11 +44,15 @@ const upload = multer({
 
 // --- 3. ROUTES ---
 
-// POST /api/listings
-// 1. Run 'protect' (User must be logged in)
-// 2. Run 'upload.array' (Handle up to 5 files from the field named 'images')
-// 3. Run 'createListing' (Save the data to MongoDB)
-router.post('/', protect, upload.array('images', 5), createListing);
+// POST /api/listings - With validation
+router.post('/', 
+  protect,
+  upload.array('images', 5),
+  listingValidation,
+  validate,
+  createListing
+);
+
 
 // GET /api/listings
 // Public: Anyone can see available food

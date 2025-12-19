@@ -1,34 +1,28 @@
 const express = require('express');
-const { body } = require('express-validator');
+const router = express.Router();
 const { registerUser, loginUser, getMe } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const { registerValidation, loginValidation, validate } = require('../middleware/validation');
 
-const router = express.Router();
-
-// Validation rules for registration
-const registerValidation = [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-];
-
-// Validation rules for login
-const loginValidation = [
-  body('email').isEmail().withMessage('Valid email is required'),
-  body('password').notEmpty().withMessage('Password is required')
-];
-
-// Route: POST /api/auth/register
-// Description: Register a new user
+// POST /api/auth/register
+// Description: Register new user with validation
 // Access: Public
-router.post('/register', registerValidation, registerUser);
+router.post('/register', 
+  registerValidation,
+  validate,
+  registerUser
+);
 
-// Route: POST /api/auth/login
-// Description: Login user and get token
+// POST /api/auth/login
+// Description: Login user with validation
 // Access: Public
-router.post('/login', loginValidation, loginUser);
+router.post('/login', 
+  loginValidation,
+  validate,
+  loginUser
+);
 
-// Route: GET /api/auth/me
+// GET /api/auth/me
 // Description: Get current logged-in user's profile
 // Access: Private (requires token)
 router.get('/me', protect, getMe);
