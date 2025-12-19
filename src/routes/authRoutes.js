@@ -1,3 +1,4 @@
+const { authLimiter } = require('../middleware/security');
 const express = require('express');
 const router = express.Router();
 const { registerUser, loginUser, getMe } = require('../controllers/authController');
@@ -8,6 +9,7 @@ const { registerValidation, loginValidation, validate } = require('../middleware
 // Description: Register new user with validation
 // Access: Public
 router.post('/register', 
+  authLimiter, 
   registerValidation,
   validate,
   registerUser
@@ -17,6 +19,7 @@ router.post('/register',
 // Description: Login user with validation
 // Access: Public
 router.post('/login', 
+  authLimiter,  
   loginValidation,
   validate,
   loginUser

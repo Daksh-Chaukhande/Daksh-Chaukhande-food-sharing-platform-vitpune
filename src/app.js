@@ -2,12 +2,15 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const { helmet, generalLimiter } = require('./middleware/security');
 const authRoutes = require('./routes/authRoutes');
 const listingRoutes = require('./routes/listingRoutes');
 const notificationRoutes = require('./routes/notificationRoutes'); // ← Add this
 
 const app = express();
 
+app.use(helmet());
+app.use(generalLimiter);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

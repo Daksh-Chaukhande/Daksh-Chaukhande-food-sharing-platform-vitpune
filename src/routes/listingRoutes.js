@@ -1,3 +1,4 @@
+const { listingLimiter } = require('../middleware/security');
 const express = require('express');
 const multer = require('multer');  // Library for handling file uploads
 const path = require('path');  // Node.js built-in library for handling file paths
@@ -47,6 +48,7 @@ const upload = multer({
 // POST /api/listings - With validation
 router.post('/', 
   protect,
+  listingLimiter, 
   upload.array('images', 5),
   listingValidation,
   validate,
