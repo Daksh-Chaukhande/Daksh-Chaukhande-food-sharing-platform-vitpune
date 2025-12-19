@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const { sendVerificationEmail } = require('../utils/sendEmail');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const { validationResult } = require('express-validator');
@@ -7,45 +9,57 @@ const { validationResult } = require('express-validator');
 // Goal: Create a new account and log them in
 // Register new user
 const registerUser = async (req, res) => {
-    // Check for validation errors from express-validator (e.g., invalid email format)
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  // Create the new user in the database
-    // We set 'isVerified: true' to simplify the process (skips email OTP verification for now)
-  const { name, email, password, phone } = req.body;
-
   try {
-    // Check database to see if email already exists
+    const { name, email, password } = req.body;
+
+    // Check if user already exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'User already exists' 
+      });
     }
 
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+
+    // Create user with verification token
     const user = await User.create({
       name,
       email,
-      password,  // This will be automatically hashed by your User Model middleware
-      phone,
-      isVerified: true
+      password,
+      isVerified: false,
+      verificationToken
     });
 
-    
-    // If creation was successful, send back the user data AND a new token
-    if (user) {
-      res.status(201).json({
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, verificationToken);
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      // Don't fail registration if email fails
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful! Please check your email to verify your account.',
+      user: {
         _id: user._id,
         name: user.name,
         email: user.email,
-        token: generateToken(user._id)  // "Digital ID Card" created here
-      });
-    }
+        isVerified: user.isVerified
+      },
+      token: generateToken(user._id)
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
+
 
 // --- 2. LOGIN USER ---
 // Access: Public
@@ -89,8 +103,50 @@ const getMe = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Verify email
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
 
-module.exports = { registerUser, loginUser, getMe };
+    // Find user with this token
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification token'
+      });
+    }
+
+    // Check if already verified
+    if (user.isVerified) {
+      return res.json({
+        success: true,
+        message: 'Email already verified!'
+      });
+    }
+
+    // Update user
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully! You can now create food listings.'
+    });
+  } catch (error) {
+    console.error('Verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+
+module.exports = { registerUser, loginUser, getMe, verifyEmail  };
 
 
 /*Key Concepts Explained

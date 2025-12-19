@@ -19,11 +19,12 @@ const foodListingSchema = new mongoose.Schema({
   },
   // --- 2. CATEGORIZATION (ENUMS) ---
   // 'enum' forces the user to pick exactly one of these options
-  foodType: {
-    type: String,
-    required: [true, 'Please specify food type'],
-    enum: ['vegetarian', 'non-vegetarian', 'vegan', 'other']
-  },
+foodType: {
+  type: String,
+  required: true,
+  enum: ['Vegetables', 'Fruits', 'Dairy', 'Bakery', 'Cooked Food', 'Packaged Food', 'Other']
+},
+
   quantity: {
     type: String,
     required: [true, 'Please specify quantity']

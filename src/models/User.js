@@ -14,25 +14,13 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    // Regex to ensure the email format is valid (e.g., user@example.com)
     match: [/^\S+@\S+\.\S+$/, 'Please use a valid email']
   },
   password: {
     type: String,
     required: [true, 'Please add a password'],
     minlength: 6,
-    // 'select: false' prevents the password from being sent to the frontend when fetching user
     select: false
-  },
-  phone: {
-    type: String,
-    default: ''
-  },
-  // Fields for the Food Sharing Map integration
-  location: {
-    latitude: { type: Number, default: null },
-    longitude: { type: Number, default: null },
-    address: { type: String, default: '' }
   },
   isVerified: {
     type: Boolean,
@@ -40,32 +28,39 @@ const userSchema = new mongoose.Schema({
   },
   verificationToken: {
     type: String,
-    default: null
+    select: false
   },
-  // Preferences for food donation alerts
+  phone: {
+    type: String,
+    default: ''
+  },
+  location: {
+    latitude: { type: Number, default: null },
+    longitude: { type: Number, default: null },
+    address: { type: String, default: '' }
+  },
   notificationPreferences: {
     enabled: { type: Boolean, default: true },
     maxDistance: { type: Number, default: 10 },
     foodTypes: [String]
   }
 }, {
-  timestamps: true  // Automatically adds 'createdAt' and 'updatedAt'
+  timestamps: true
 });
+
 // --- 2. SECURITY MIDDLEWARE (HASHING) ---
-// This runs automatically BEFORE saving a user to the database
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-    // If password wasn't changed, skip hashing to prevent errors
+// Hash password before saving (modern async/await - no next() needed)
+userSchema.pre('save', async function() {
+  // Only hash if password was modified
   if (!this.isModified('password')) {
-    next();
+    return;
   }
-  // Generate a "salt" (random data) and hash the password with it
+  
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
-    
+
 // --- 3. LOGIN METHOD ---
-// Helper function to check if the entered password matches the hashed one
 // Method to compare password
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);

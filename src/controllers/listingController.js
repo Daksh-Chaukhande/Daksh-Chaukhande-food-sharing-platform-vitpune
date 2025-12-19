@@ -1,10 +1,22 @@
 const FoodListing = require('../models/FoodListing');
+const User = require('../models/User');
 const calculateDistance = require('../utils/calculateDistance');
 
 // --- 1. CREATE LISTING ---
 // Access: Private
 const createListing = async (req, res) => {
   try {
+    // Check if user is verified
+    const user = await User.findById(req.user._id);
+    
+    if (!user.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email before creating listings',
+        requiresVerification: true
+      });
+    }
+    
     let imagePaths = [];
     if (req.files) {
       imagePaths = req.files.map(file => file.path);
@@ -35,9 +47,15 @@ const createListing = async (req, res) => {
       images: imagePaths
     });
 
-    res.status(201).json(listing);
+    res.status(201).json({
+      success: true,
+      listing: listing
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -47,12 +65,10 @@ const getListings = async (req, res) => {
   try {
     const { latitude, longitude, maxDistance } = req.query;
     
-    // Fetch all available food from DB
     const listings = await FoodListing.find({ status: 'available' })
       .populate('donorId', 'name email phone')
       .sort({ createdAt: -1 });
     
-    // If User Location is provided, calculate distances
     if (latitude && longitude) {
       const listingsWithDistance = listings.map(listing => {
         const distance = calculateDistance(
@@ -68,22 +84,35 @@ const getListings = async (req, res) => {
         };
       });
       
-      // Filter by Max Distance
       if (maxDistance) {
         const filtered = listingsWithDistance.filter(
           listing => listing.distance <= parseFloat(maxDistance)
         );
-        return res.json(filtered);
+        return res.json({
+          success: true,
+          count: filtered.length,
+          listings: filtered
+        });
       }
       
-      // Sort by Distance
       listingsWithDistance.sort((a, b) => a.distance - b.distance);
-      return res.json(listingsWithDistance);
+      return res.json({
+        success: true,
+        count: listingsWithDistance.length,
+        listings: listingsWithDistance
+      });
     }
     
-    res.json(listings);
+    res.json({
+      success: true,
+      count: listings.length,
+      listings: listings
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -95,12 +124,21 @@ const getListing = async (req, res) => {
       .populate('donorId', 'name email');
       
     if (listing) {
-      res.json(listing);
+      res.json({
+        success: true,
+        listing: listing
+      });
     } else {
-      res.status(404).json({ message: 'Listing not found' });
+      res.status(404).json({ 
+        success: false,
+        message: 'Listing not found' 
+      });
     }
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
@@ -111,21 +149,32 @@ const deleteListing = async (req, res) => {
     const listing = await FoodListing.findById(req.params.id);
 
     if (!listing) {
-      return res.status(404).json({ message: 'Listing not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'Listing not found' 
+      });
     }
 
     if (listing.donorId.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: 'Not authorized to delete this listing' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Not authorized to delete this listing' 
+      });
     }
 
     await listing.deleteOne();
-    res.json({ message: 'Listing removed' });
+    res.json({ 
+      success: true,
+      message: 'Listing removed successfully' 
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
 
-// Export ALL functions
 module.exports = {
   createListing,
   getListings,

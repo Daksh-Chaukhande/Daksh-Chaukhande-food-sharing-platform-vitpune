@@ -1,7 +1,7 @@
 const { authLimiter } = require('../middleware/security');
 const express = require('express');
 const router = express.Router();
-const { registerUser, loginUser, getMe } = require('../controllers/authController');
+const { registerUser, loginUser, getMe, verifyEmail  } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const { registerValidation, loginValidation, validate } = require('../middleware/validation');
 
@@ -29,5 +29,9 @@ router.post('/login',
 // Description: Get current logged-in user's profile
 // Access: Private (requires token)
 router.get('/me', protect, getMe);
+// GET /api/auth/verify-email/:token
+// Description: Verify user's email address
+// Access: Public
+router.get('/verify-email/:token', verifyEmail);
 
 module.exports = router;
