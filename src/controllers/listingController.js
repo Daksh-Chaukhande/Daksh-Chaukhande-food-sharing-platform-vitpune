@@ -2,6 +2,7 @@ const FoodListing = require('../models/FoodListing');
 const User = require('../models/User');
 const calculateDistance = require('../utils/calculateDistance');
 
+
 // --- 1. CREATE LISTING ---
 // Access: Private
 const createListing = async (req, res) => {
@@ -22,6 +23,7 @@ const createListing = async (req, res) => {
       imagePaths = req.files.map(file => file.path);
     }
 
+
     // Handle both form-data and JSON
     let pickupLocation;
     if (req.body.pickupLocation) {
@@ -36,6 +38,7 @@ const createListing = async (req, res) => {
       };
     }
 
+
     const listing = await FoodListing.create({
       donorId: req.user._id,
       title: req.body.title,
@@ -46,6 +49,7 @@ const createListing = async (req, res) => {
       pickupLocation: pickupLocation,
       images: imagePaths
     });
+
 
     res.status(201).json({
       success: true,
@@ -58,6 +62,7 @@ const createListing = async (req, res) => {
     });
   }
 };
+
 
 // --- 2. GET ALL LISTINGS (SMART FEED) ---
 // Access: Public
@@ -116,6 +121,7 @@ const getListings = async (req, res) => {
   }
 };
 
+
 // --- 3. GET SINGLE LISTING ---
 // Access: Public
 const getListing = async (req, res) => {
@@ -142,11 +148,61 @@ const getListing = async (req, res) => {
   }
 };
 
-// --- 4. DELETE LISTING ---
+
+// --- 4. UPDATE LISTING ---
+// Access: Private
+const updateListing = async (req, res) => {
+  try {
+    const listing = await FoodListing.findById(req.params.id);
+
+    if (!listing) {
+      return res.status(404).json({
+        success: false,
+        message: 'Listing not found'
+      });
+    }
+
+    // Check authorization - only donor can update
+    if (listing.donorId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this listing'
+      });
+    }
+
+    // Handle new images if uploaded
+    if (req.files && req.files.length > 0) {
+      const newImagePaths = req.files.map(file => file.path);
+      req.body.images = [...(listing.images || []), ...newImagePaths];
+    }
+
+    // Update the listing
+    const updatedListing = await FoodListing.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      listing: updatedListing
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// --- 5. DELETE LISTING ---
 // Access: Private
 const deleteListing = async (req, res) => {
   try {
     const listing = await FoodListing.findById(req.params.id);
+
 
     if (!listing) {
       return res.status(404).json({ 
@@ -155,12 +211,14 @@ const deleteListing = async (req, res) => {
       });
     }
 
+
     if (listing.donorId.toString() !== req.user._id.toString()) {
       return res.status(401).json({ 
         success: false,
         message: 'Not authorized to delete this listing' 
       });
     }
+
 
     await listing.deleteOne();
     res.json({ 
@@ -175,9 +233,11 @@ const deleteListing = async (req, res) => {
   }
 };
 
+
 module.exports = {
   createListing,
   getListings,
   getListing,
+  updateListing,
   deleteListing
 };

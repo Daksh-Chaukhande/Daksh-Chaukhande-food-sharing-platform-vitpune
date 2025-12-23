@@ -2,11 +2,13 @@ const { listingLimiter } = require('../middleware/security');
 const express = require('express');
 const multer = require('multer');  // Library for handling file uploads
 const path = require('path');  // Node.js built-in library for handling file paths
-const { createListing, getListings, getListing, deleteListing } = require('../controllers/listingController');
+const { createListing, getListings, getListing, updateListing, deleteListing } = require('../controllers/listingController');
 const { protect } = require('../middleware/authMiddleware');
 const { listingValidation, validate } = require('../middleware/validation');
 
+
 const router = express.Router();
+
 
 // --- 1. MULTER CONFIGURATION (Storage) ---
 // This defines WHERE to store files and HOW to name them
@@ -21,6 +23,7 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + file.originalname);
   }
 });
+
 
 // --- 2. UPLOAD SETTINGS ---
 // This initializes the upload middleware with rules
@@ -43,7 +46,9 @@ const upload = multer({
   }
 });
 
+
 // --- 3. ROUTES ---
+
 
 // POST /api/listings - With validation
 router.post('/', 
@@ -60,11 +65,20 @@ router.post('/',
 // Public: Anyone can see available food
 router.get('/', getListings);
 
+
 // GET /api/listings/:id
 // Public: Get details of a single food item
 router.get('/:id', getListing);
+
+
+// PUT /api/listings/:id
+// Private: User must be logged in to update (Controller checks ownership)
+router.put('/:id', protect, upload.array('images', 5), updateListing);
+
+
 // DELETE /api/listings/:id
 // Private: User must be logged in to delete (Controller should also check if they own it)
 router.delete('/:id', protect, deleteListing);
+
 
 module.exports = router;
